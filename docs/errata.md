@@ -1,24 +1,24 @@
 # Errata
 
-Things in the upstream README, in the code, or in the documentation set itself that are wrong, inaccurate, missing, or that didn't make it into the screenshots. Maintained in sync with the rest of `docs/` — when something here is fixed in the repo, the entry moves to a "Fixed" section.
+Notes on places where the project README and the code drift from each other, behaviors that aren't obvious from reading either alone, and screens this documentation set wanted but couldn't capture. Each entry includes a pointer to where in `docs/` the matter is treated in full, so future README revisions can land the corrections without losing context.
 
-## Upstream README inaccuracies (relative to develop @ 0.5.3)
+## README ↔ code differences (relative to develop @ 0.5.3)
 
-| Claim in README | Reality in code |
-|---|---|
-| "Defualt Poster Storage" appears twice in the Volumes table | Typo — should be "Default". `README.md` lines 44, 56. |
-| Volumes table includes `/custom` | Nothing in `Dockerfile`, `entrypoint.sh`, or `backend/core/config.py` special-cases `/custom`. Users mount any host directory at any container path; the in-app settings (gdrive storage path, destination directory) reference the container path. The `/custom` row gives the false impression of a documented mount point. See [`install.md`](install.md#volumes). |
-| Volumes table says `/config` holds the "Default Poster Storage" | The default cache lives at `/config/posters/gdrive/`, not directly at `/config/`. The destination of organized posters defaults to `/config/posters/assets/`. Both are overridable. See [`configuration.md`](configuration.md#whats-in-config). |
-| Example compose `image: dweagle/posterflow:develop` | Correct, but the README's compose YAML uses `/path/to/idarr/posters:/idarr` — the `/idarr` mount only matters for poster makers using IDarr's sync-to-personal-Drive feature. Most operators don't need it. The note above the volumes section in the README ("These are default locations…") is also misleading; the paths are settings, not defaults baked into the image. |
-| Quick Start section says "The setup wizard runs on first launch to configure your media server connections and Google Drive credentials" | Accurate. Not a defect, just confirming. |
-| The README implies SemVer tags exist | No SemVer tags are published to Docker Hub by the CI workflow. Only `latest` (from `main`) and `develop` (from `develop`). See [`upgrade.md`](upgrade.md#image-tags). |
-| Env var table omits `MALLOC_ARENA_MAX` | The Dockerfile sets it to `2`. It matters — without it, `malloc_trim` in the job-queue post-job cleanup doesn't return memory to the OS, and the container's RSS grows monotonically across long-running installs. Documented in [`install.md`](install.md#environment-variables). |
-| Env var table omits `BRANCH` and `POSTERFLOW_TESTING` | Both are read by `backend/main.py`. `BRANCH` is set by CI to suffix the displayed version; `POSTERFLOW_TESTING` is used only by the test suite to skip startup side effects. Operators don't need to set either, but they exist. |
-| Env var table description: `DEBUG` "can be toggled in-app" | Correct, but understates: the in-app toggle persists to the DB and wins over the env var on subsequent restarts. The env var is a one-time "force-on at boot" override. |
+| Topic | What the README currently says | What the code does |
+|---|---|---|
+| Spelling | "Defualt Poster Storage" appears twice in the Volumes table (`README.md` lines 44, 56). | The intended word is "Default" — easy correction next time someone edits the README. |
+| `/custom` volume | Listed as a documented mount in the Volumes table. | `Dockerfile`, `entrypoint.sh`, and `backend/core/config.py` don't reference `/custom`. Operators can mount any host directory at any container path and refer to it from settings; the row may read as a baked-in convention that doesn't exist in the code. See [`install.md`](install.md#volumes). |
+| Default poster storage | Implies `/config` itself holds the "Default Poster Storage". | The default GDrive cache lives at `/config/posters/gdrive/`; organized output defaults to `/config/posters/assets/`. Both are overridable via settings. See [`configuration.md`](configuration.md#whats-in-config). |
+| `/idarr` mount | Shown in the example compose. | The `/idarr` mount is only relevant for poster makers using IDarr's sync-to-personal-Drive feature; routine operators can omit it. The line above the volumes section ("These are default locations…") could read more accurately as "these are settings, not built-in defaults". |
+| Image tags | Implies SemVer tags (consistent with the SemVer-styled `CHANGELOG.md`). | CI publishes only `latest` (from `main`) and `develop` (from `develop`). No per-version tags are pushed. See [`upgrade.md`](upgrade.md#image-tags). |
+| `MALLOC_ARENA_MAX` | Not in the Env var table. | Set to `2` in the Dockerfile; required for `malloc_trim` in the post-job cleanup to actually return memory to the OS over long uptimes. Worth listing. Documented in [`install.md`](install.md#environment-variables). |
+| `BRANCH` and `POSTERFLOW_TESTING` | Not in the Env var table. | Both read by `backend/main.py`. `BRANCH` is set by CI to suffix the displayed version; `POSTERFLOW_TESTING` is used only by the test suite. Operators don't need to set either, but they exist. |
+| `DEBUG` env var | "Can be toggled in-app". | Accurate, with a subtlety: the in-app toggle persists in the DB and wins over the env var on subsequent restarts. The env var is effectively a one-time "force-on at boot" override. |
+| Quick Start text | "The setup wizard runs on first launch to configure your media server connections and Google Drive credentials." | Accurate as-is; listed here only so the reconciliation is exhaustive. |
 
-## Code behaviors that surprised the documentation author
+## Behaviors worth surfacing in operator docs
 
-These aren't bugs, but they're worth flagging because they affect operator decisions:
+These aren't defects, but they affect deployment decisions and aren't easy to discover from the code alone:
 
 - **The community drives list is fetched from `develop` even on `main` builds.** `backend/services/drive_loader.py` hardcodes `https://raw.githubusercontent.com/dweagle/posterflow/develop/backend/assets/drives.json`. If `develop` ships a poorly-formed drives file, every running PosterFlow on every branch sees it. There's no env-var override.
 - **The CORS allowlist includes `https://www.photopea.com` by default.** This is necessary for Maker Tools, but it's a deliberate cross-origin trust users should be aware of. See [`security.md`](security.md#what-posterflow-does-not-protect-against).
