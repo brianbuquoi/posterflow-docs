@@ -1,0 +1,18 @@
+# Upstream clone — read-only reference, not part of this repo.
+repo/
+
+# Capture-script runtime state (recreated by docker compose up).
+scratch/config/
+scratch/assets/
+scratch/idarr/
+
+# Node / Python tooling — recreated by `npm install` / venv setup.
+scratch/node_modules/
+scratch/package-lock.json
+scratch/venv/
+
+# Editor / OS noise.
+.DS_Store
+.idea/
+.vscode/
+*.swp

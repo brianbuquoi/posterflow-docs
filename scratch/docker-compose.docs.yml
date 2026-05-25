@@ -1,0 +1,16 @@
+services:
+  posterflow-docs:
+    image: posterflow:docs
+    container_name: posterflow-docs
+    ports:
+      - "8357:8000"
+    volumes:
+      - ./config:/config
+      - ./assets:/assets
+      - ./idarr:/idarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - DEBUG=true
+    restart: "no"
